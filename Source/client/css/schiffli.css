@@ -3,6 +3,27 @@ body {
 	font-family: arial, verdana, serif; 
 }
 
+.SchiffFeld {
+	width: 30px;
+	height: 30px;
+	line-height: 30px;
+	display: inline-block;
+	text-align: center;
+	margin: 0px;
+	padding: 0px;	
+}
+.button, .SchiffFeldGegner {
+	
+	border: 1px solid black;
+}
+
+.SchiffFeldGegner:hover {
+	background-color: yellow;
+}
+
+
+
+
 #game {
 	width: 500px;
 	margin: 0 auto;

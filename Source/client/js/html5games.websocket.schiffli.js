@@ -1,100 +1,89 @@
-
+// Globale Variablen
 var schiffliVars = {
-	// Contants
+	// Message-Typen
 	CHAT_MESSAGE : 100,
 	CHAT_ROOM : 101,
+	GAME_LOGIC : 200,
 
+	// Details fürs Game
 	
-	
-	LINE_SEGMENT : 0,	
-	GAME_LOGIC : 2,
-
-	// Constant for game logic state
 	isPlayRoom : 0,
-
-
 	WAITING_TO_START : 0,
+	GAME_sendSchiffe: 201,
+	GAME_versenkeSchiffe: 202,
+
 	GAME_START : 1,
 	GAME_OVER : 2,
-	GAME_RESTART : 3,
+	GAME_RESTART : 3,	
+	
 
-	// indictes if it is drawing now.
-	isDrawing : false,
-
-	isTurnToDraw : false,
-
-	// the starting point of next line drawing.
-	startX : 0,
-	startY : 0,
+	isPlayerTurn : false,
+	cntRunde     : 1
 }
 
 // init script when the DOM is ready.
 $(function(){
 
+function createGrid() {
 
-$(".drop-target").droppable({
-	accept: ".drag-item",
-});
-
-$(".drag-item").draggable({
-	snap: '.gridlines',
-	stop: function(){
-        $(this).draggable('option','revert','invalid');
-    }
-});
+size = 10 + schiffliVars.cntRunde-1;	
+gegner = $('.drop-target-gegner');
+ich    = $('.drop-target-ich');
 
 
+for (var x = 65; x < 65+size; x++) {
 
-$('.drag-item').droppable(
-	{
-    greedy: true,
-    tolerance: 'touch',
-    drop: function(event,ui){
-           ui.draggable.draggable('option','revert',true);
-	     }
+
+	if(x == 65){
+		for(var y = 0; y <= size; y++){
+			gegner.append('<div class="SchiffFeld">'+ (y>0? y:'') +'</div>');
+		}
+		gegner.append('<br>');
+	}
+	
+	gegner.append('<div class="SchiffFeld">'+String.fromCharCode(x)+'</div>');
+
+	for(var y = 1; y <= size; y++){
+		gegner.append('<button id="g' + String.fromCharCode(x) + '' + y + '" class="SchiffFeld SchiffFeldGegner">' + String.fromCharCode(x) + '' + y + '</button>');
+
+		$('#g' + String.fromCharCode(x) + '' + y + '').on("click", function(){ if(schiffliVars.isPlayerTurn == true) {
+
+			var data = {};
+			data.dataType = schiffliVars.GAME_LOGIC;
+			data.gameState = schiffliVars.GAME_versenkeSchiffe;	
+			data.message = String.fromCharCode(x) + '' + y + '';	
+			schiffliVars.socket.send(JSON.stringify(data));		
+
+		} });
+
 	}
 
-);
+	gegner.append('<br>');
 
-
-
-
-
-
-function createGrid(size) {
-var i,
-sel = $('.drop-target'),
-	height = sel.height(),
-	width = sel.width(),
-	ratioW = Math.floor(width / size),
-	ratioH = Math.floor(height / size);
-
-for (i = 0; i <= ratioW; i++) { // vertical grid lines
-  $('<div />').css({
-		'margin-top': 0,
-		'margin-left': i * size,
-		'width': 1,		
-		'height': height
-  })
-	.addClass('gridlines')
-	.appendTo(sel);
 }
 
-for (i = 0; i <= ratioH; i++) { // horizontal grid lines
-  $('<div />').css({
-		'margin-top': i * size,
-		'margin-left': 0,
-		'width': width,
-		'height': 1
-  })
-	.addClass('gridlines')
-	.appendTo(sel);
+
+for (var x = 65; x < 65+size; x++) {
+	
+	if(x == 65){
+		for(var y = 0; y <= size; y++){
+			ich.append('<div class="SchiffFeld">'+ (y>0? y:'') +'</div>');
+		}
+		ich.append('<br>');
+	}
+	
+	ich.append('<div class="SchiffFeld">'+String.fromCharCode(x)+'</div>');
+
+	for(var y = 1; y <= size; y++){
+		ich.append('<input type="checkbox" name="' + String.fromCharCode(x) + '' + y + '" class="SchiffFeld meinFeld" />');
+	}
+
+	ich.append('<br>');
 }
 
-$('.gridlines').show();
 }
 
-createGrid(30);
+createGrid();
 
 	// check if existence of WebSockets in browser
 	if (window["WebSocket"]) {
@@ -132,6 +121,11 @@ createGrid(30);
 				console.log("PR: "+dta.isPlayRoom);
 
 			}
+			else if (data.dataType === schiffliVars.GAME_LOGIC){
+				//var dta = JSON.parse(data.message);
+				schiffliVars.isPlayerTurn = data.isPlayerTurn
+				
+			}
 			
 			
 			/* Kosmetik */
@@ -141,6 +135,8 @@ createGrid(30);
 			if(schiffliVars.isPlayRoom == 0) $("#playZone").hide();
 			else $("#playZone").show("slow");
 
+			if(schiffliVars.isPlayerTurn) $("#drop-target-gegner button").attr("disabled", false);
+			else $("#drop-target-gegner button").attr("disabled", true);
 
 		};
 
@@ -151,6 +147,7 @@ createGrid(30);
 	}
 
 	$("#send").click(sendMessage);
+	$("#festlegen").click(festlegen);
 
 	$("#chat-input").keypress(function(event) {
 		if (event.keyCode === 13) {
@@ -159,15 +156,28 @@ createGrid(30);
 	});
 
 
-
-
-
-
  });
 
 
 
+function festlegen(){
+	console.log("festlegen");
+		// pack the message into an object.
+		var data = {};
+		data.dataType = schiffliVars.GAME_LOGIC;
+		data.gameState = schiffliVars.GAME_sendSchiffe;
 
+		data.message = "";
+
+		$('input.meinFeld:checkbox:checked').each(function () {
+			data.message += $(this).attr("name") + '|';
+		});
+	
+		schiffliVars.socket.send(JSON.stringify(data));
+		$("#drop-target-ich input:checkbox").attr("disabled", true);
+		$("#festlegen").attr("disabled", true);
+
+}
 
 function sendMessage()
 {
