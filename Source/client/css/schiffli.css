@@ -1,0 +1,55 @@
+body {
+	background: #98bde4;
+	font-family: arial, verdana, serif; 
+}
+
+#game {
+	width: 500px;
+	margin: 0 auto;
+}
+
+#game h1 {
+	text-align: center;
+	margin-bottom: 5px;
+	text-shadow: 0px 1px 0px #fff;
+}
+
+#drawing-pad {
+	border: 10px solid #fffeff;
+	background: #f1f3ef;
+	box-shadow:0px 3px 5px #333;
+}
+
+#chat-history {
+	list-style: none;
+	padding: 0;
+}
+
+#chat-history li {
+	border-bottom: 1px dashed rgba(20,20,20,.2);
+	margin: 10px 0;
+}
+
+#chat-userlist li {display: inline; font-size: 0.8em; margin-left: 0px; padding-left: 10px;}
+
+
+
+
+
+.gridlines {
+    display: none;
+    position:absolute;
+    background-color:#ccc;
+}
+.drag-item, .outside-drag-item {
+    position:absolute;
+    background:red;
+    width:29px;
+    height:59px;
+    cursor:move;
+}
+.drop-target {
+    width:300px;
+    height:300px;
+    border:dashed 1px orange;
+}

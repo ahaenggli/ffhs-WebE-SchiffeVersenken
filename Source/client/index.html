@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="de-ch">
+<head>
+	<meta charset="utf-8">
+	<title>Schiffli versenken</title>
+	<meta name="description" content="Schiffli versenken - das online Game">
+	<meta name="author" content="Adriano">
+	<link rel="stylesheet" type="text/css" media="all" href="./css/schiffli.css">
+	<script   type="text/javascript" 
+			  src="https://code.jquery.com/jquery-3.4.1.min.js"
+			  integrity="sha256-CSXorXvZcTkaix6Yvo6HppcZGetbYMGWSFlBw8HfCJo="
+			  crossorigin="anonymous"></script>
+	<script
+			  src="https://code.jquery.com/ui/1.12.1/jquery-ui.min.js"
+			  integrity="sha256-VazP97ZCwtekAsvgPBSUwPFKdrwD3unUfSGVYrahUqU="
+			  crossorigin="anonymous"></script>
+
+	<script type="text/javascript" src="./js/html5games.websocket.schiffli.js"></script>
+
+</head>
+<body>
+
+Raum: <span id="myRaum">X</span><br>
+Benutzerliste: 
+<ul id="chat-userlist" style="list-style-type: none; display:inline; margin-left: 0; padding-left: 0;"></ul>
+
+<table>
+<tr>
+	<td id="playZone">
+	<div id="guguus">
+		<div class="drop-target">
+			<div class="drag-item" style="height:59px;">Drag me</div>
+			<div class="drag-item">Drag me2</div>
+		</div>
+
+	<hr>
+
+		<div class="drop-target">
+			<div class="drag-item" style="width:119px">Drag me</div>
+			<div class="drag-item">Drag me2</div>
+		</div>
+
+	</div>
+
+	</td>
+	<td>
+
+			<ul id="chat-history" style="display:block;height:450px;background-color: green;  overflow: scroll; "></ul>
+			<input type="text" id="chat-input" autofocus autocomplete="off" style="width:500px;">
+			<input type="button" value="Senden" id="send">
+
+	</td>
+
+</tr>
+</table>
+
+
+<b>Kommandos:</b>
+<table>
+
+<tr><td>/nick [new_username]</td><td>Wechselt den Username</td></tr>
+<tr><td>/play [username]</td><td>Eroeffnet ein Spiel mit [username]</td></tr>
+<tr><td>/quit</td><td>Retour zur Lobby</td></tr>
+
+</table>
+</body>
+</html>
