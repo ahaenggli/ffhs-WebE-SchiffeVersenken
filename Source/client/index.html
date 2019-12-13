@@ -6,7 +6,7 @@
 	<meta name="description" content="Schiffli versenken - das online Game">
 	<meta name="author" content="Adriano">
 	<link rel="stylesheet" type="text/css" media="all" href="./css/schiffli.css">
-	<script   type="text/javascript" 
+	<script   type="text/javascript"
 			  src="https://code.jquery.com/jquery-3.4.1.min.js"
 			  integrity="sha256-CSXorXvZcTkaix6Yvo6HppcZGetbYMGWSFlBw8HfCJo="
 			  crossorigin="anonymous"></script>
@@ -20,45 +20,56 @@
 </head>
 <body>
 
-Raum: <span id="myRaum">X</span><br>
-Benutzerliste: 
-<ul id="chat-userlist" style="list-style-type: none; display:inline; margin-left: 0; padding-left: 0;"></ul>
+<!-- Sprache-Auswal oben rechts platzier -->
+<div class="obenrechts">
+	<select id="Sprache">
+		<option value="CH" selected="selected">Schweiz</option>
+		<option value="DE">Deutsch</option>
+	</select>
+</div>
 
+<!-- Titel -->
+<h1><label id="lblTitel"></label></h1>
+
+<!-- Statische Infos zum Raum -->
+<div><label id="lblRaum"></label>: <span id="myRaum">X</span></div>
+<div><label id="lblBenutzerliste"></label>: <ul id="chat-userlist"><!-- Do chöme denne d'Users via JS dri --></ul></div>
+<div class="playZone"><label id="lblRunde"></label>: <span id="runde">0</span><br></div>
+<br>
 <table>
 <tr>
-	<td id="playZone">
-	<div id="guguus">
-		Gegner:
-		<div class="drop-target-gegner" id="drop-target-gegner">
-		</div>
-
+	<!-- Spielfeld links (zuerst versteckt) -->
+	<td class="playZone">
+		<div><label id="lblGegner"></label></div>
+		<div class="drop-target-gegner" id="drop-target-gegner"></div>
 	<hr>
-		Du:
-		<div class="drop-target-ich" id="drop-target-ich">
-		</div>
-		<input type="button" value="festlegen" id="festlegen">
+		<div><label id="lblIch"></label></div>
+		<div class="drop-target-ich" id="drop-target-ich"></div>
+		<button type="send" value="festlegen" id="festlegen"><label id="lblBtnFestlegen"></label></button>
 	</div>
 
 	</td>
+
+	<!-- Chats rechts (immer sichtbar) -->
 	<td>
 
-			<ul id="chat-history" style="display:block;height:450px;background-color: green;  overflow: scroll; "></ul>
+			<ul id="chat-history"></ul>
 			<input type="text" id="chat-input" autofocus autocomplete="off" style="width:500px;">
-			<input type="button" value="Senden" id="send">
+			<button type="send" value="Senden" id="send"><label id="lblBtnSend"></label></button>
 
 	</td>
 
 </tr>
 </table>
 
-
-<b>Kommandos:</b>
+<br>
+<!-- Kommando-Bereich für Erklärungen -->
+<b><label id="lblKommando"></label>:</b>
 <table>
-
-<tr><td>/nick [new_username]</td><td>Wechselt den Username</td></tr>
-<tr><td>/play [username]</td><td>Eroeffnet ein Spiel mit [username]</td></tr>
-<tr><td>/quit</td><td>Retour zur Lobby</td></tr>
-
+	<tr><td>/nick [new_username]</td>	<td><label id="lblKdoNick"></label></td></tr>
+	<tr><td>/play [username]</td>		<td><label id="lblKdoPlay"></label></td></tr>
+	<tr><td>/quit</td>					<td><label id="lblKdoQuit"></label></td></tr>
 </table>
+
 </body>
 </html>

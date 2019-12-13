@@ -10,18 +10,15 @@ var GAME_LOGIC = 200;
 var WAITING_TO_START = 0;
 var GAME_sendSchiffe = 201;
 var GAME_versenkeSchiffe = 202;
+var GAME_Wasser = 203;
+var Game_Treffer = 204;
+
 var GAME_START = 1;
-var GAME_OVER = 2;
 var GAME_RESTART = 3;
 
-/* User */
+/* User-Klasse */
 class User {
-  /*socket = "";
-  room = "";
-  lobby = "";
-  id = 0;
-  Username = "";*/
-  
+
   constructor(socket, room) {
   // Verbindung/Socket
   this.socket = socket;
@@ -41,40 +38,42 @@ class User {
 setUsername(str){
   this.Username = str;
 };
-
+// Raum setzen
 setRoom(rom){
     this.room = rom;
 };
 
+// Neue Nachrichten von user-Socket kommen hier rein
 handleOnUserMessage() {
-  var user = this;  
-  // handle on message
+  var user = this; // der aktuelle User
   user.socket.on("message", function(message){
     console.log("[User`"+user.Username+"`] sent message: " + message);
     user.room.handleOnUserMessage(user, message);
   });
 };
 
+// Benutzer verliert/schliesst Verbindung
 handleOnUserLeft() {
   var user = this;
   var room = this.room;
-  // handle user closing
+
   user.socket.onclose = function(){
     console.log("A connection left.");
+    // Benutzer aus Raum entfernen
     room.removeUser(user);
   };
+  // geänderte Raum-Details an alle Chat-Partner senden
   room.sendDetails();
 };
 
 
-};
+}; // User-Klasse fertig
 
 
-
-
-/* Raum */ 
+/* Raum-Klasse */
 class Room {
 
+// Konstruktor
 constructor(rn) {
     this.users = [];
     this.Roomname = rn;
@@ -82,15 +81,18 @@ constructor(rn) {
     this.isPlayRoom = 0;
 }
 
+// User kommt in den Raum hinzu
 addUser(user){
-
+  // Default-Username setzen (u[n+1])
   if(user.Username === "")  user.setUsername("u"+this.counter);
   this.users.push(user);
-  this.counter++;
-  
+  this.counter++; //counter hochzählen
+
+  // aktuellen Raum ermitteln und neue Details an alle User versenden (damit diese auch wissen, dass es einen neuen hat)
   var room = this;
   room.sendDetails();
-  // tell others that someone joins the room
+
+  // zusätzlich mittels Chat-Nachricht den user auch anzeigen
   var data = {
     dataType: CHAT_MESSAGE,
     sender: "Server",
@@ -99,116 +101,139 @@ addUser(user){
   this.sendAll(JSON.stringify(data));
 };
 
+// User aus dem Raum entfernen
 removeUser(user) {
-  // loop to find the user
+  // User in Array suchen und "rausschneiden"
   for (var i=this.users.length; i >= 0; i--) {
     if (this.users[i] === user) {
       this.users.splice(i, 1);
     }
   }
+  // geänderte Raumdetails wieder an alle senden
   var room = this;
   room.sendDetails();
 };
 
+// Die Nachricht an alle User im Raum senden
 sendAll(message) {
+  // Alle User iterieren
   for (var i=0, len=this.users.length; i<len; i++) {
+    // über den Socket eines jeden einzelnen die Nachricht senden
     this.users[i].socket.send(message);
   }
 };
 
+// Raum-Details an alle senden
 sendDetails(){
   console.log('sendDetails');
   var room = this;
   var cpy = [];
 
-  room.users.forEach(u => { 
-    cpy.push({Username: u.Username});        
+  // Liste sämtlicher Usernamen
+  room.users.forEach(u => {
+    cpy.push({Username: u.Username});
   });
+  // ... zusammen mit Raum-Name und ob es ein Spiel-Raum ist (oder nicht)
   var msg = JSON.stringify({
-    roomName: room.Roomname, 
+    roomName: room.Roomname,
     userList: cpy,
     isPlayRoom: room.isPlayRoom
-  
   });
 
+  // .. als Server-Nachricht
   var data = {
     dataType: CHAT_ROOM,
     sender: "Server",
     message: msg
   };
+  // .. an alle User im Raum senden
   room.sendAll(JSON.stringify(data));
 };
 
-
+// Funktion ist zwar mit User verbunden, dort wird es aber an den Raum delegiert
 handleOnUserMessage(user, message){
 
-  // construct the message
+    // Message in JSON-Objekt umwandeln für Datenzugriff
     var data = JSON.parse(message);
-
+    // Spiel-Logik hat hier nichts zu suchen, kommt dann im GameRoom noch ...
     if (data.dataType === GAME_LOGIC) return;
+
+    // Chat-Nachricht
     if (data.dataType === CHAT_MESSAGE) {
-			// add the sender information into the message data object.
+			// Absender ergänzen, die anderen wollen ja wissen, vom wem die Nachricht war
 			data.sender = user.Username;
     }
-
+    // Es hat eine Nachricht drin
     if (typeof data.message !== 'undefined'){
+      /*
+      * Diverse mögliche Kommando abarbeiten
+      */
+      //UserName soll geändert werden
         if(data.message.startsWith("/nick ")) {
         console.log("Kommando: /nick");
+        // Username überschreiben und alle User informieren
         user.setUsername(data.message.replace("/nick ", ""));
         user.room.sendDetails();
 
+        // zusätzlich eine Nachricht an alle vorbereiten
         data = {
           dataType: CHAT_MESSAGE,
           sender: "Server",
           message: "User ["+data.sender + "] heisst neu ["+user.Username+"]"
         };
-        
-      } // Kommando /play wechselt dem Raum bei Erfolg
+      }
+      // Kommando /play wechselt dem Raum bei Erfolg
       else if(data.message.startsWith("/play ")) {
+        // mit wem will aktueller User spielen?
         let otherName = data.message.replace("/play ", "");
         let otherIdx = user.room.users.findIndex(e => e.Username.trim() == otherName );
 
         console.log("/playResult: " + otherIdx);
 
+        // Gibt es den überhaupt?
         if(otherIdx == -1){
-            
+          //nein, nachricht vorbereiten
           data = {
             dataType: CHAT_MESSAGE,
             sender: "Server",
             message: "User ["+otherName + "] nicht gefunden"
           };
-
+          // ja, es gibt ihn
         }else {
           let other = user.room.users[otherIdx];
 
+          // aktuellen User und Spielpartner aus aktuellem Raum entfernen
           user.room.removeUser(user);
           user.room.removeUser(other);
 
+          // neuen Raum eröffnen und beide darin zuordnen
           user.setRoom(new GameRoom(user.Username + " vs. " + otherName));
-          
           other.setRoom(user.room);
           user.room.addUser(user);
           user.room.addUser(other);
+          //--> Die User werden im addUser noch über die neuen Raum-Details informiert
         }
-        
+
 
       }
+      // Raum verlassen und in Lobby zurückkehren
       else if(data.message.startsWith("/quit")) {
-        
+
         console.log("/quit: " + user.Username);
-            
+          //info vorbereiten und senden
           data = {
             dataType: CHAT_MESSAGE,
             sender: "Server",
             message: "User ["+user.Username + "] quitted"
           };
           user.room.sendAll(JSON.stringify(data));
-
+          // user entfernen
           user.room.removeUser(user);
+          // .. und an Lobby zuweisen
           user.room = user.lobby;
-          user.lobby.addUser(user);
+          user.lobby.addUser(user); // in addUser werden wieder alle informiert
 
-
+          // Nachricht vorbereiten
           data = {
             dataType: CHAT_MESSAGE,
             sender: "Server",
@@ -216,150 +241,246 @@ handleOnUserMessage(user, message){
           };
 
         }
+        // alles andere müssten nun Chat-Nachrichten sein
+        else {
+          // Aus Sicherheitsgründen werden sämtliche Zeichen durch den Code ersetzt
+          // dadruch bleiben auch alle <>/*[]" erhalten und es kann nichts "eingeschleust" werden
+          data.message = data.message.replace(/[\u00A0-\u9999<>\&]/gim, function(i) {
+          return '&#'+i.charCodeAt(0)+';';
+         });
+
+        }
       }//message ist gesetzt
 
-    // send to all clients in room.
+    // vorbereitete Nachricht an alle senden
     user.room.sendAll(JSON.stringify(data));
 
 };
 
 
-};
+}; // Klasse Raum fertig
 
-// GameRoom erbt von Room
+// GameRoom erbt von Room alles und kann dann überschreiben/ergänzen
 class GameRoom extends Room {
 
   constructor(rn) {
+    // Konstruktor von Raum aufrufen, so muss Code nicht dupliziert werden
     super(rn);
-    // the current turn of player index.
+    // GameRoom-Spezifische Daten
     this.playerTurn = 0;
     this.isPlayRoom = 1;
     this.cntRunde   = 1;
-
     this.SchiffePos = [];
-
     this.currentGameState = WAITING_TO_START;
 
-    // send the game state to all players.
+    // Aktuellen Status an alle senden
     var gameLogicData = {
       dataType: GAME_LOGIC,
       gameState: WAITING_TO_START
     };
-
 	this.sendAll(JSON.stringify(gameLogicData));
 
 };
 
+// Es kommt ein User in den Game-Raum dazu
 addUser(user) {
+    // normale Logik aufrufen
     super.addUser(user);
-    
+    // User-spezifische Spielvariable initialisieren
     this.SchiffePos[user.id] =     {
        sindBooteGesetzt: false,
-       Boote : []      
+       Boote : "",
+       Getroffen : ""
     };
 
-  // start the game if there are 2 or more connections
+  // Es kann 'richtig' losgehen, sobald 2 Leute im Raum sind
 	if (this.currentGameState === WAITING_TO_START && this.users.length == 2) {
 		this.startGame();
   }
-  
-};
 
+};
+// sind Schiffe valide platziert?
+areSchiffliValide(strSchiffe){
+  if(strSchiffe.length > 0) return true;
+  else return false;
+}
+// Funktion ist zwar mit User verbunden, dort wird es aber an den Raum delegiert
 handleOnUserMessage(user, message){
-  var room = this;
+  var room = this; //aktuellen Raum bestimmen
+  // Code-Duplikate vermeiden, Methode aus vererbtem Teil aufrufen
   super.handleOnUserMessage(user, message);
 
-    var data = JSON.parse(message);
+  // Abhandlung nur fürs Game
+  var data = JSON.parse(message);
 
-    if (data.dataType === GAME_LOGIC) {
-      console.log("Game-Room [" + user.Username + "]: ...");
+  if (data.dataType === GAME_LOGIC) {
+  console.log("Game-Room: [" + user.Username + "] ...");
 
-      if(data.gameState === GAME_sendSchiffe){
-        this.SchiffePos[user.id] = {sindBooteGesetzt: true,
-                                    Boote: data.message.split('|') };
+    // Schiiffe platziert
+   if(data.gameState === GAME_sendSchiffe){
+     // sind Schiffe valide gesetzt worden?
+    var valide = this.areSchiffliValide(data.message);
+    console.log("areSchiffliValide: " +valide);
+    if(valide){
 
-        console.log(this.users[0].id);
+      // Positionen merkeen
+      this.SchiffePos[user.id] = {sindBooteGesetzt: true,
+                                    Boote: data.message,
+                                    Getroffen : ""
+                                   };
+        // Diverse Debugs..
+        /*console.log(this.users[0].id);
         console.log(this.users[1].id);
         console.log(this.SchiffePos[this.users[0].id].sindBooteGesetzt);
         console.log(this.SchiffePos[this.users[1].id].sindBooteGesetzt);
+        */
 
-
+        // haben schon beide Spiele die Schiffe gesetzt?
         if(this.SchiffePos[this.users[0].id].sindBooteGesetzt &&
           this.SchiffePos[this.users[1].id].sindBooteGesetzt){
-  
+            // juppa, es kann somit losgehen ..
             console.log("Boote sind gesetzt...");
-  
-  
-             this.WechsleSpieler();
-  
-  
+            this.currentGameState = GAME_START;
+            this.WechsleSpieler();
           }
-      }
-
-      if(data.gameState === GAME_versenkeSchiffe){
-          this.WechsleSpieler();
-      }
-   
-
     }
+  }
+    // Versuche ein Boot zu versenken
+      if(data.gameState === GAME_versenkeSchiffe){
+          console.log("GAME_versenkeSchiffe");
 
+      // Hier sollte man nur sein, wenn beide Spiele auch die Boote gesetzt haben, sonst weitergehen
+      if(this.SchiffePos[this.users[0].id].sindBooteGesetzt && this.SchiffePos[this.users[1].id].sindBooteGesetzt){
 
+          var myId = user.id;
+          var otherId = ((user.id == this.users[0].id))? this.users[1].id : this.users[0].id;
+          var otherUser = ((user.id == this.users[0].id))? this.users[1] : this.users[0];
+
+          console.log("Ich bin:" + user.Username);
+          console.log("ID: " + user.id);
+          console.log("ID: " + myId);
+          console.log("Der andere ist: " + otherId);
+
+        // Bin ich auch wirklich wirklich dran?
+        if(this.users[this.playerTurn].id == myId){
+
+          // Nachricht vorbereiten
+          var sndTreffer = {
+            dataType: GAME_LOGIC,
+            gameState: -1,
+            message: 'g'+data.message
+          };
+
+          // Ist an Ziel Wasser oder Boot?
+          if(this.SchiffePos[otherId].Boote.includes(data.message+"|")){
+            console.log("Treffer!");
+            if(!this.SchiffePos[otherId].Getroffen.includes(data.message+"|")) this.SchiffePos[otherId].Getroffen += data.message+"|";
+            sndTreffer.gameState = Game_Treffer;
+          }else{
+            console.log("Wasser :( ");
+            sndTreffer.gameState = GAME_Wasser;
+          }
+          // Rückmeldung senden
+          user.socket.send(JSON.stringify(sndTreffer));
+          // "betroffenen" auch informieren
+          sndTreffer.message = 'i'+data.message;
+          otherUser.socket.send(JSON.stringify(sndTreffer));
+
+          // alles versenkt, (er/sie/es) hat verloren!
+          if(this.SchiffePos[otherId].Getroffen.length == this.SchiffePos[otherId].Boote.length){
+              var data = {
+                dataType: CHAT_MESSAGE,
+                sender: "Server",
+                message: "User " + user.Username + " hat gewonnen."
+              };
+              room.sendAll(JSON.stringify(data));
+
+              // Runde erhöhen
+              this.cntRunde++;
+              data = {
+                dataType: GAME_LOGIC,
+                gameState: GAME_RESTART,
+                message: "User " + user.Username + " hat gewonnen.",
+                newRunde: this.cntRunde
+              };
+              room.sendAll(JSON.stringify(data));
+              this.currentGameState = GAME_RESTART;
+              // Variablen zurücksetzen
+             this.SchiffePos[myId] =     {
+                sindBooteGesetzt: false,
+                Boote : "",
+                Getroffen : ""
+             };
+             this.SchiffePos[otherId] =     {
+              sindBooteGesetzt: false,
+              Boote : "",
+              Getroffen : ""
+           };
+
+          }
+          // der andere ist nun dran mit dem Zug
+          this.WechsleSpieler();
+        }//ich war wirklich wirklich dran
+        else { console.log("!!!!: User war nicht dran?! ");}
+        }// beide Spieler haben Boote gesetzt
+      } // versuche Boot zu versenken
+    }//GAME-Logik
 
 };
 
+// Spieler sollen sich abwechseln
 WechsleSpieler(){
-   // pick a player to draw
+   // aktuellen Raum festlegen
    var room = this;
+   // der andere war vorhin dran
    var other = this.playerTurn;
+   // nun der, der halt nicht dran war (Modulo-Operation, durch Rest-Klassen kommt so immer 0 oder 1 raus)
    this.playerTurn = (this.playerTurn+1) % this.users.length;
 
-   // game start with answer to the player in turn.
+
+   // der Spieler am Zug wird darüber informiert, dass er dran ist
+   // als Detail wird noch mitgesendet, welche Runde gerade gespielt wird
    var gameLogicDataForDrawer = {
      dataType: GAME_LOGIC,
-     gameState: GAME_START,
+     gameState: this.currentGameState ,
+     newRunde: this.cntRunde,
      isPlayerTurn: true
    };
 
-   // the user who draws in this turn.
+   // Ausnahme: Schiffe wurden noch nicht platziert, dann ist nämlich noch niemand an der Reihe
+   if(!this.SchiffePos[this.users[0].id].sindBooteGesetzt && !this.SchiffePos[this.users[1].id].sindBooteGesetzt) gameLogicDataForDrawer.isPlayerTurn = false;
+
    var user = this.users[this.playerTurn];
    user.socket.send(JSON.stringify(gameLogicDataForDrawer));
 
+   // Beim anderen User dasselbe, der ist aber so oder so nicht an der Reihe
    gameLogicDataForDrawer = {
      dataType: GAME_LOGIC,
-     gameState: GAME_START,
+     gameState: this.currentGameState ,
+     newRunde: this.cntRunde,
      isPlayerTurn: false
    };
 
    user = this.users[other];
    user.socket.send(JSON.stringify(gameLogicDataForDrawer));
 
-   room.currentGameState = GAME_START;
 };
 
+// Spiel kann starten
 startGame() {
-  var room = this;
-
-	// pick a player to draw
-	this.playerTurn = (this.playerTurn+1) % this.users.length;
-  
-  var tUser = this.users[this.playerTurn];
-
-  console.log("Start game with player [" + tUser.Username + "]'s turn.");
-
-	// Allen mitteilen, dass Schiffe platziert werden können
+  // Allen mitteilen, dass Schiffe platziert werden können
+  this.currentGameState = WAITING_TO_START;
 	var gameLogicDataForAllPlayers = {
     dataType: GAME_LOGIC,
-    gameState: WAITING_TO_START,
-    isPlayerTurn: true
+    gameState: this.currentGameState,
+    isPlayerTurn: false
   };
-
 	this.sendAll(JSON.stringify(gameLogicDataForAllPlayers));
-
-  
 };
 
 };
 
+/* Module exportieren, damit sie in NodeJS via require geladen werden können */
 module.exports.User = User;
 module.exports.Room = Room;
 module.exports.GameRoom = GameRoom;

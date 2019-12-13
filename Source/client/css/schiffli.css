@@ -1,47 +1,31 @@
+/* Hintergrund */
 body {
 	background: #98bde4;
-	font-family: arial, verdana, serif; 
+	font-family: arial, verdana, serif;
 }
 
-.SchiffFeld {
-	width: 30px;
-	height: 30px;
-	line-height: 30px;
-	display: inline-block;
-	text-align: center;
-	margin: 0px;
-	padding: 0px;	
-}
-.button, .SchiffFeldGegner {
-	
-	border: 1px solid black;
+/* Sprach-Wahl oben rechts */
+.obenrechts {
+	position: absolute;
+    top: 1em;
+    right: 1em;
 }
 
-.SchiffFeldGegner:hover {
-	background-color: yellow;
+/* Nutzer in Liste ohne Zeilenumbrüche */
+#chat-userlist{
+	list-style-type: none;
+	display:inline;
+	margin-left: 0;
+	padding-left: 0;
 }
+#chat-userlist li {display: inline; font-size: 0.8em; margin-left: 0px; padding-left: 10px;}
 
-
-
-
-#game {
-	width: 500px;
-	margin: 0 auto;
-}
-
-#game h1 {
-	text-align: center;
-	margin-bottom: 5px;
-	text-shadow: 0px 1px 0px #fff;
-}
-
-#drawing-pad {
-	border: 10px solid #fffeff;
-	background: #f1f3ef;
-	box-shadow:0px 3px 5px #333;
-}
-
-#chat-history {
+/* Chat */
+#chat-history{
+	display:block;
+	height:450px;
+	background-color: green;
+	overflow: scroll;
 	list-style: none;
 	padding: 0;
 }
@@ -51,26 +35,90 @@ body {
 	margin: 10px 0;
 }
 
-#chat-userlist li {display: inline; font-size: 0.8em; margin-left: 0px; padding-left: 10px;}
 
-
-
-
-
-.gridlines {
-    display: none;
-    position:absolute;
-    background-color:#ccc;
+/* Schiffe-Felder Formatierungen */
+.SchiffFeld {
+	width: 30px;
+	height: 30px;
+	line-height: 30px;
+	display: inline-block;
+	text-align: center;
+	margin: 0px;
+	padding: 0px;
 }
-.drag-item, .outside-drag-item {
-    position:absolute;
-    background:red;
-    width:29px;
-    height:59px;
-    cursor:move;
+.button, .SchiffFeldGegner {
+
+	border: 1px solid black;
 }
-.drop-target {
-    width:300px;
-    height:300px;
-    border:dashed 1px orange;
+
+.SchiffFeldGegner:hover {
+	background-color: yellow;
 }
+
+
+/* Checkboxen-Scheiss-Formatierung anpassen */
+.box {
+display: inline-block;
+
+position: relative;
+margin-bottom: 0px;
+cursor: pointer;
+font-size: 20px;
+}
+/* Hide the default style of the checkbox */
+input[type=checkbox] {
+visibility: hidden;
+}
+/* Create a custom checkbox */
+.mark, .mark2 {
+position: absolute;
+top: 0;
+left: 0;
+height: 25px;
+width: 25px;
+background-color: #999999;
+}
+/* Specify the background color for the checkbox while hovering */
+.box:hover input + .mark {
+background-color: #1c87c9;
+}
+/* Specify the background color for the checkbox when the checkbox is active */
+.box input:active + .mark {
+background-color: #ffcc00;
+}
+/* Specify the background color for the checkbox when it is checked */
+.box input:checked + .mark {
+background-color: #8ebf42;
+}
+/* Checkmark to be shown in checkbox */
+/* It will not be shown when not checked */
+.mark:after, .mark2:after {
+content: "";
+position: absolute;
+display: none;
+}
+/* Display checkmark when checked */
+.box input:checked + .mark:after {
+display: block;
+}
+/* Styling the checkmark using webkit */
+/* Rotated the rectangle by 45 degree and showing only two border to make it look like a tick mark */
+.box .mark:after {
+left: 8px;
+bottom: 5px;
+width: 6px;
+height: 12px;
+border: solid #eee;
+border-width: 0 4px 4px 0;
+-webkit-transform: rotate(45deg);
+-ms-transform: rotate(45deg);
+transform: rotate(45deg);
+}
+
+.box .mark2:after {
+	left: 8px;
+	bottom: 5px;
+	width: 6px;
+	height: 12px;
+	border: solid #eee;
+	}
