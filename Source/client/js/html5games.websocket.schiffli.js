@@ -14,6 +14,7 @@ var schiffliVars = {
 	GAME_Treffer: 204,
 	GAME_START : 1,
 	GAME_RESTART : 3,
+	GAME_ShipNotValid : 205,
 
 	// Status zu Raum ond Spiel
 	isPlayRoom : 0,
@@ -37,6 +38,7 @@ var Texte_CH = {
 	lblGegner: "Gägner",
 	lblIch: "Ich",
 	lblBtnFestlegen: "Schiffli setze",
+	GAME_ShipNotValid : "Duen doch dini Schiffli noch de Spielregle platziere!",
 	GAME_schiffeLeer : "Tue doch bitte zersch es Schiffli platziere!"
 };
 var Texte_DE = {
@@ -50,6 +52,7 @@ var Texte_DE = {
 	lblGegner: "Gegner",
 	lblIch: "Du",
 	lblBtnFestlegen: "Schiffe festlegen",
+	GAME_ShipNotValid : "Schiffe sind nicht gemäss Spielregeln platziert. Korrigiere das um spielen du dürfen.",
 	GAME_schiffeLeer : "Bitte Schiffe setzen."
 };
 
@@ -208,6 +211,9 @@ $("#festlegen").click(festlegen);
 
 					console.log('#W'+data.message);
 				}
+				if(data.gameState === schiffliVars.GAME_ShipNotValid){
+					alert(Texte.GAME_ShipNotValid);
+				}
 			} // GAME_LOGIC fertig
 
 			/* Kann bei jeder Nachricht vom Server ändern, daher nochmals machen */
@@ -265,7 +271,8 @@ function festlegen(){
 
 		// nur senden, wenn auch etwas ausgewählt, sonst verliert man ja gleich...
 		if(data.message !== ""){
-			schiffliVars.socket.send(JSON.stringify(data));
+			if(areSchiffliValide(data.message)) schiffliVars.socket.send(JSON.stringify(data));
+			else alert(Texte.GAME_ShipNotValid);
 		}else{
 			alert(Texte.GAME_schiffeLeer);
 		}
@@ -348,3 +355,112 @@ function createGrid() {
 	dynHTML += ('</table>');
 	ich.append(dynHTML);
 }
+
+
+
+// sind Schiffe valide platziert?
+function areSchiffliValide(strSchiffe){
+
+	// undefined -> kann nicht valide sein
+	if(strSchiffe == undefined) return false;
+
+	// nichts gesetzt auch nicht
+	if(strSchiffe.length <= 0) return false;
+
+	// Anzahl genutze Boote-Felder != erlaubte Bootefelder
+	if(strSchiffe.split('|').length-1 != (1*5 + 2*4 + 3*3 + 4*2) ) return false;
+
+	// Spielfeld-Grösse
+	var size = 10 + schiffliVars.cntRunde-1;
+
+	// Platzierte Boote finden
+	var fldGenutzt = [];
+	var defBoote = [];
+	for (var feld of strSchiffe.split('|')){
+		//Feld noch von keinem anderen "Schiff" genutzt
+		if(feld != undefined && feld != "" && fldGenutzt.indexOf(feld) == -1){
+			var mySchiff = [];
+			mySchiff.push(feld); //Startfeld kommt da immer drin vor
+			// 'feld' ist unser Startpunkt, suche nun umliegende Felder ab bis Boot "zusammengesetzt"
+			var trenneBuchstabeZahl = feld.match(/[a-z]+|[^a-z]+/gi);
+			var Buchstabe = trenneBuchstabeZahl[0];
+			var Zahl      = trenneBuchstabeZahl[1];
+
+			// ausserhalb Spielfeld platziert -> abbruch, Platzierung kann nicht valide sein
+			if(Zahl > size || Buchstabe.charCodeAt(0) > 65+size ) return false;
+
+			//selbe Linie, nach rechts suchen
+			var r = Zahl;
+			r++;
+			var potentiellesFeld = Buchstabe+r;
+			while(strSchiffe.includes(potentiellesFeld+'|') && fldGenutzt.indexOf(potentiellesFeld) == -1){
+				mySchiff.push(potentiellesFeld);
+				fldGenutzt.push(potentiellesFeld);
+				r++;
+				potentiellesFeld = Buchstabe+r;
+			}
+
+			//selbe Linie, nach links suchen
+			var l = Zahl;
+			l--;
+			var potentiellesFeld = Buchstabe+l;
+			while(strSchiffe.includes(potentiellesFeld+'|') && fldGenutzt.indexOf(potentiellesFeld) == -1){
+				mySchiff.push(potentiellesFeld);
+				fldGenutzt.push(potentiellesFeld);
+				l--;
+				potentiellesFeld = Buchstabe+l;
+			}
+
+
+			//selbe Spalte, nach unten
+			var bu = Buchstabe.charCodeAt(0);
+			bu++;
+			var potentiellesFeld = String.fromCharCode(bu)+Zahl;
+			//console.log(potentiellesFeld);
+			while(strSchiffe.includes(potentiellesFeld+'|') && fldGenutzt.indexOf(potentiellesFeld) == -1){
+				mySchiff.push(potentiellesFeld);
+				fldGenutzt.push(potentiellesFeld);
+				bu++;
+				potentiellesFeld = String.fromCharCode(bu)+Zahl;
+			}
+
+			//selbe Spalte, nach oben
+			var bo = Buchstabe.charCodeAt(0);
+			bo--;
+			var potentiellesFeld = String.fromCharCode(bo)+Zahl;
+			//console.log(potentiellesFeld);
+			while(strSchiffe.includes(potentiellesFeld+'|') && fldGenutzt.indexOf(potentiellesFeld) == -1){
+				mySchiff.push(potentiellesFeld);
+				fldGenutzt.push(potentiellesFeld);
+				bo--;
+				potentiellesFeld = String.fromCharCode(bo)+Zahl;
+			}
+			defBoote.push(mySchiff);
+
+		}
+	}//for
+
+
+	console.log(defBoote);
+
+	// es müssen genau 10 Boote sein
+	if(defBoote.length != 10) return false;
+
+	// Längen der Boote validieren
+	var tLng = {};
+	for(var boot of defBoote){
+		tLng[boot.length] = tLng[boot.length]+1 || 1;
+	}
+
+	// Boot mit Länge 5 gibt's nicht
+	if(tLng[5] == undefined || tLng[5] != 1) return false;
+	// Boot mit Länge 4 gibt's nicht
+	if(tLng[4] == undefined || tLng[4] != 2) return false;
+	// Boot mit Länge 3 gibt's nicht
+	if(tLng[3] == undefined || tLng[3] != 3) return false;
+	// Boot mit Länge 2 gibt's nicht
+	if(tLng[2] == undefined || tLng[2] != 4) return false;
+
+	// alles andere war i.O. somit muss Platzierung valide sein
+	return true;
+  }
